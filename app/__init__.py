@@ -147,9 +147,11 @@ def setup_metadata():
     )
 
 
-    openid_metadata["issuer"] = cfgserv.service_url
-    openid_metadata["pushed_authorization_request_endpoint"] = f"{cfgserv.service_url}/pushed_authorization"
+    oauth_base = cfgserv.oauth_url.rstrip("/")
+    openid_metadata["issuer"] = oauth_base
+    openid_metadata["pushed_authorization_request_endpoint"] = f"{oauth_base}/pushed_authorization"
     oidc_metadata["credential_issuer"] = cfgserv.service_url
+    oidc_metadata["authorization_servers"] = [oauth_base]
     oidc_metadata["display"][0]["logo"]["uri"] = f"{cfgserv.service_url}/ic-logo.png"
 
 

@@ -109,7 +109,68 @@ To run the EUDIW Issuer Front End, please follow these simple steps (some of whi
     flask --app app run --debug
     ```
 
-    
+### 3.1 Local HTTPS helper scripts for self-signed development
+
+If you are running the local authorization service on port `5001`, the issuer backend on port `5002`, and this frontend on port `5003` with a shared self-signed certificate, the repository includes helper scripts to configure and run the frontend.
+
+1. Ensure `.env` exists and the frontend certificate files are available:
+
+    ```shell
+    cp .env.example .env
+    ls server.crt server.key
+    ```
+
+        If you do not already have a local self-signed certificate for the frontend, you can generate one with the repository's SAN config:
+
+        ```shell
+        openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+            -keyout server.key \
+            -out server.crt \
+            -config san.cnf
+        ```
+
+        The provided `san.cnf` includes the local IP address in the certificate Subject Alternative Name so mobile devices on the same network can reach the HTTPS frontend without hostname mismatch errors.
+
+2. Configure the frontend `.env` for your LAN host and local ports:
+
+    ```shell
+    MYIP=192.168.0.110 ./configure_frontend_env.sh
+    ```
+
+    Optional overrides:
+
+    + `AUTH_PORT` defaults to `5001`
+    + `ISSUER_PORT` defaults to `5002`
+    + `FRONTEND_PORT` defaults to `5003`
+    + `FRONTEND_ID`, `LOG_DIR`, and `CREDENTIALS_SUPPORTED` can also be overridden
+
+3. Start the frontend with HTTPS and a custom CA bundle built from the local auth/backend certificate:
+
+    ```shell
+    ./run_frontend.sh
+    ```
+
+    This script:
+
+    + activates `.venv`
+    + refreshes `.env` with local URLs
+    + fetches the certificate from `${BACKEND_HOST:-192.168.0.110}:${BACKEND_PORT:-5001}`
+    + writes `backend.crt` and `custom_ca_bundle.pem`
+    + exports `REQUESTS_CA_BUNDLE`
+    + starts Flask on `https://0.0.0.0:${FRONTEND_PORT:-5003}` using `server.crt` and `server.key`
+
+4. If needed, regenerate only the trust bundle without starting Flask:
+
+    ```shell
+    BACKEND_HOST=192.168.0.110 BACKEND_PORT=5001 ./setup_backend_trust.sh
+    ```
+
+Notes:
+
++ These scripts are intended for local development with self-signed certificates, not production deployment.
++ They assume the local auth server and issuer backend present the same certificate chain, so trusting the cert fetched from port `5001` is sufficient for the frontend's outgoing HTTPS requests.
++ `backend.crt` and `custom_ca_bundle.pem` are local runtime artifacts and should not be committed.
+
 ## 5. Make your local EUDIW Issuer Front End available on the Internet (optional)
 
 If you want to make your local EUDIW Issuer available on the Internet, we recommend to use NGINX reverse proxy and certbot (to generate an HTTPS certificate).

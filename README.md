@@ -57,6 +57,8 @@ Click [here](install.md) for detailed installation instructions.
 
 Click [here](install.md) for detailed instructions.
 
+For local self-signed HTTPS development, see the helper-script workflow in [install.md](install.md#31-local-https-helper-scripts-for-self-signed-development).
+
 ## 3. Frequently Asked Questions
 
 ### A. How to make your local EUDIW Issuer Front-end available on the Internet?
