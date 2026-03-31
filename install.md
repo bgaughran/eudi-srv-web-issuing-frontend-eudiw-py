@@ -134,7 +134,7 @@ If you are running the local authorization service on port `5001`, the issuer ba
 2. Configure the frontend `.env` for your LAN host and local ports:
 
     ```shell
-    MYIP=192.168.0.110 ./configure_frontend_env.sh
+    MYIP=<your-lan-ip> ./configure_frontend_env.sh
     ```
 
     Optional overrides:
@@ -154,7 +154,7 @@ If you are running the local authorization service on port `5001`, the issuer ba
 
     + activates `.venv`
     + refreshes `.env` with local URLs
-    + fetches the certificate from `${BACKEND_HOST:-192.168.0.110}:${BACKEND_PORT:-5001}`
+    + fetches the certificate from `${BACKEND_HOST:-<your-lan-ip>}:${BACKEND_PORT:-5001}`
     + writes `backend.crt` and `custom_ca_bundle.pem`
     + exports `REQUESTS_CA_BUNDLE`
     + starts Flask on `https://0.0.0.0:${FRONTEND_PORT:-5003}` using `server.crt` and `server.key`
@@ -162,7 +162,7 @@ If you are running the local authorization service on port `5001`, the issuer ba
 4. If needed, regenerate only the trust bundle without starting Flask:
 
     ```shell
-    BACKEND_HOST=192.168.0.110 BACKEND_PORT=5001 ./setup_backend_trust.sh
+    BACKEND_HOST=<your-lan-ip> BACKEND_PORT=5001 ./setup_backend_trust.sh
     ```
 
 Notes:

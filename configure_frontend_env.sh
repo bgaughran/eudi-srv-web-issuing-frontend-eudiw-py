@@ -2,7 +2,13 @@
 
 set -euo pipefail
 
-MYIP="${MYIP:-192.168.0.110}"
+detect_lan_ip() {
+    ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true
+}
+
+DETECTED_LAN_IP="$(detect_lan_ip)"
+
+MYIP="${MYIP:-${DETECTED_LAN_IP:-localhost}}"
 AUTH_PORT="${AUTH_PORT:-5001}"
 ISSUER_PORT="${ISSUER_PORT:-5002}"
 FRONTEND_PORT="${FRONTEND_PORT:-5003}"
@@ -20,8 +26,16 @@ if [ ! -f .env ] && [ -f .env.example ]; then
   cp .env.example .env
 fi
 
-python3 - <<PY
+MYIP="$MYIP" \
+AUTH_PORT="$AUTH_PORT" \
+ISSUER_PORT="$ISSUER_PORT" \
+FRONTEND_PORT="$FRONTEND_PORT" \
+FRONTEND_ID="$FRONTEND_ID" \
+LOG_DIR="$LOG_DIR" \
+CREDENTIALS_SUPPORTED="$CREDENTIALS_SUPPORTED" \
+python3 - <<'PY'
 from pathlib import Path
+import os
 
 env_path = Path(".env")
 if env_path.exists():
@@ -29,13 +43,25 @@ if env_path.exists():
 else:
     lines = []
 
+myip = os.environ["MYIP"]
+auth_port = os.environ["AUTH_PORT"]
+issuer_port = os.environ["ISSUER_PORT"]
+frontend_port = os.environ["FRONTEND_PORT"]
+frontend_id = os.environ["FRONTEND_ID"]
+log_dir = os.environ["LOG_DIR"]
+credentials_supported = os.environ["CREDENTIALS_SUPPORTED"]
+
 updates = {
-    "SERVICE_URL": "${FRONTEND_URL}",
-    "FRONTEND_ID": "${FRONTEND_ID}",
-    "ISSUER_URL": "${ISSUER_URL}",
-    "OAUTH_URL": "${OAUTH_URL}",
-    "LOG_DIR": "${LOG_DIR}",
-    "CREDENTIALS_SUPPORTED": "${CREDENTIALS_SUPPORTED}",
+    "MYIP": myip,
+    "AUTH_PORT": auth_port,
+    "ISSUER_PORT": issuer_port,
+    "FRONTEND_PORT": frontend_port,
+    "SERVICE_URL": "https://${MYIP}:${FRONTEND_PORT}",
+    "FRONTEND_ID": frontend_id,
+    "ISSUER_URL": "https://${MYIP}:${ISSUER_PORT}",
+    "OAUTH_URL": "https://${MYIP}:${AUTH_PORT}",
+    "LOG_DIR": log_dir,
+    "CREDENTIALS_SUPPORTED": credentials_supported,
 }
 
 seen = set()
