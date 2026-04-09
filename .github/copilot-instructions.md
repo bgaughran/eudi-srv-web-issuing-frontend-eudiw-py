@@ -5,6 +5,7 @@
 - This repo owns the issuer web frontend and supporting built assets for local issuance journeys.
 - Keep changes aligned with issuer metadata and backend contracts.
 - When frontend flow behaviour, env configuration, or asset pipeline behaviour changes, update `project-docs` in the same task.
+- Default Git flow in this workspace is local `wip/<stream>` commits promoted directly with `git push origin HEAD:main`; do not publish remote `wip/<stream>` branches unless explicitly requested.
 
 ## Local Checks
 
