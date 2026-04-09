@@ -18,7 +18,7 @@ ISSUER_URL="https://${MYIP}:${ISSUER_PORT}"
 OAUTH_URL="https://${MYIP}:${AUTH_PORT}"
 FRONTEND_ID="${FRONTEND_ID:-5d725b3c-6d42-448e-8bfd-1eff1fcf152d}"
 LOG_DIR="${LOG_DIR:-/tmp/issuer_frontend/log_dev}"
-CREDENTIALS_SUPPORTED="${CREDENTIALS_SUPPORTED:-eu.europa.ec.eudi.pid_mdoc,eu.europa.ec.eudi.mdl_mdoc}"
+CREDENTIALS_SUPPORTED="${CREDENTIALS_SUPPORTED:-eu.europa.ec.eudi.pid_mdoc,eu.europa.ec.eudi.pid_vc_sd_jwt,eu.europa.ec.eudi.mdl_mdoc}"
 
 mkdir -p "$LOG_DIR"
 
@@ -56,10 +56,10 @@ updates = {
     "AUTH_PORT": auth_port,
     "ISSUER_PORT": issuer_port,
     "FRONTEND_PORT": frontend_port,
-    "SERVICE_URL": "https://${MYIP}:${FRONTEND_PORT}",
+    "SERVICE_URL": f"https://{myip}:{frontend_port}",
     "FRONTEND_ID": frontend_id,
-    "ISSUER_URL": "https://${MYIP}:${ISSUER_PORT}",
-    "OAUTH_URL": "https://${MYIP}:${AUTH_PORT}",
+    "ISSUER_URL": f"https://{myip}:{issuer_port}",
+    "OAUTH_URL": f"https://{myip}:{auth_port}",
     "LOG_DIR": log_dir,
     "CREDENTIALS_SUPPORTED": credentials_supported,
 }
