@@ -2,8 +2,38 @@
 
 set -euo pipefail
 
+ensure_frontend_assets() {
+	local output_css="app/static/css/tailwind.css"
+	local input_css="assets/input.css"
+	local config_js="tailwind.config.js"
+	local needs_build=0
+
+	if [[ ! -f "$output_css" ]]; then
+		needs_build=1
+	elif [[ "$input_css" -nt "$output_css" ]] || [[ "$config_js" -nt "$output_css" ]] || [[ "package.json" -nt "$output_css" ]]; then
+		needs_build=1
+	fi
+
+	if [[ "$needs_build" != "1" ]]; then
+		return
+	fi
+
+	echo "Ensuring frontend Tailwind assets are built..."
+	if [[ ! -x "node_modules/.bin/tailwindcss" ]]; then
+		if [[ -f package-lock.json ]]; then
+			npm ci
+		else
+			npm install --no-package-lock --no-fund --no-audit
+		fi
+	fi
+
+	npm run build
+}
+
 # Activate Python virtual environment
 source .venv/bin/activate
+
+ensure_frontend_assets
 
 # Configure local frontend environment
 ./configure_frontend_env.sh
