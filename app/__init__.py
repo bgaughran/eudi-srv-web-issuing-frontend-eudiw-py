@@ -132,6 +132,15 @@ def setup_metadata():
 
             data = response.json()
 
+            credential_request_encryption = data.get("credential_request_encryption")
+            if isinstance(credential_request_encryption, dict):
+                oidc_metadata["credential_request_encryption"] = copy.deepcopy(
+                    credential_request_encryption
+                )
+                oidc_metadata_clean["credential_request_encryption"] = copy.deepcopy(
+                    credential_request_encryption
+                )
+
             credentials_supported = data.get("credential_configurations_supported", {})
 
             if cfgserv.credentials_supported != "*":
