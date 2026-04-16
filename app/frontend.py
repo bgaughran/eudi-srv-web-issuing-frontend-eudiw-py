@@ -17,7 +17,7 @@ from flask import (
 )
 
 from app_config.config_service import ConfService as cfgservice
-from app import oidc_metadata, openid_metadata
+from app import get_credential_configurations_supported, oidc_metadata, openid_metadata
 
 frontend = Blueprint("frontend", __name__, url_prefix="/")
 CORS(frontend)
@@ -194,8 +194,13 @@ def credentialOffer():
 @frontend.route("/.well-known/<service>")
 def well_known(service):
     if service == "openid-credential-issuer":
+        credential_issuer_metadata = dict(oidc_metadata)
+        credential_issuer_metadata["credential_configurations_supported"] = (
+            get_credential_configurations_supported(refresh=True)
+        )
+
         info = {
-            "response": oidc_metadata,
+            "response": credential_issuer_metadata,
             "http_headers": [
                 ("Content-type", "application/json"),
                 ("Pragma", "no-cache"),
@@ -338,7 +343,7 @@ def display_credential_offer():
         # cred = data_payload.get("cred")
         credential_offer_URI = data_payload.get("credential_offer_URI")
 
-        credentialsSupported = oidc_metadata["credential_configurations_supported"]
+        credentialsSupported = get_credential_configurations_supported(refresh=True)
 
         credentials = {"sd-jwt vc format": {}, "mdoc format": {}}
 

@@ -99,6 +99,59 @@ def _apply_metadata_overrides(metadata: Dict[str, Any], overrides: Dict[str, Any
         credential_request_encryption["jwks"] = {"keys": [jwk]}
 
 
+def _filter_supported_credentials(credentials_supported: Dict[str, Any]) -> Dict[str, Any]:
+    if cfgserv.credentials_supported == "*":
+        return credentials_supported
+
+    allowed_credentials = set(c.strip() for c in cfgserv.credentials_supported.split(","))
+    return {k: v for k, v in credentials_supported.items() if k in allowed_credentials}
+
+
+def _load_fallback_credentials_supported(dir_path: str) -> Dict[str, Any]:
+    credentials_supported: Dict[str, Any] = {}
+
+    for file in os.listdir(dir_path + "/metadata_config/credentials_supported/"):
+        if file.endswith("json"):
+            json_path = os.path.join(
+                dir_path + "/metadata_config/credentials_supported/", file
+            )
+            with open(json_path, encoding="utf-8") as json_file:
+                credential = json.load(json_file)
+                credentials_supported.update(credential)
+
+    return credentials_supported
+
+
+def _fetch_remote_metadata() -> Dict[str, Any]:
+    metadata_endpoint = f"{cfgserv.issuer_url}/.well-known/openid-credential-issuer"
+    response = requests.get(metadata_endpoint, timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+
+def _fetch_remote_credentials_supported() -> Dict[str, Any]:
+    data = _fetch_remote_metadata()
+    credentials_supported = data.get("credential_configurations_supported", {})
+    return _filter_supported_credentials(credentials_supported)
+
+
+def get_credential_configurations_supported(refresh: bool = False) -> Dict[str, Any]:
+    credentials_supported = oidc_metadata.get("credential_configurations_supported", {})
+
+    if not refresh:
+        return credentials_supported
+
+    try:
+        credentials_supported = _fetch_remote_credentials_supported()
+        oidc_metadata["credential_configurations_supported"] = credentials_supported
+    except Exception as exc:
+        cfgserv.app_logger.warning(
+            f"Credential metadata refresh failed, continuing with cached metadata. {exc}"
+        )
+
+    return oidc_metadata.get("credential_configurations_supported", {})
+
+
 def setup_metadata():
     global oidc_metadata
     global oidc_metadata_clean
@@ -124,14 +177,8 @@ def setup_metadata():
         _apply_metadata_overrides(oidc_metadata, metadata_overrides)
         _apply_metadata_overrides(oidc_metadata_clean, metadata_overrides)
 
-        metadata_endpoint = f"{cfgserv.issuer_url}/.well-known/openid-credential-issuer"
-
         try:
-            response = requests.get(metadata_endpoint)
-            response.raise_for_status()
-
-            data = response.json()
-
+            data = _fetch_remote_metadata()
             credential_request_encryption = data.get("credential_request_encryption")
             if isinstance(credential_request_encryption, dict):
                 oidc_metadata["credential_request_encryption"] = copy.deepcopy(
@@ -141,25 +188,11 @@ def setup_metadata():
                     credential_request_encryption
                 )
 
-            credentials_supported = data.get("credential_configurations_supported", {})
-
-            if cfgserv.credentials_supported != "*":
-                allowed_credentials = set(c.strip() for c in cfgserv.credentials_supported.split(","))
-                credentials_supported = {
-                    k: v for k, v in credentials_supported.items() if k in allowed_credentials
-                }
-
+            credentials_supported = _filter_supported_credentials(
+                data.get("credential_configurations_supported", {})
+            )
         except Exception:
-            for file in os.listdir(
-                dir_path + "/metadata_config/credentials_supported/"
-            ):
-                if file.endswith("json"):
-                    json_path = os.path.join(
-                        dir_path + "/metadata_config/credentials_supported/", file
-                    )
-                    with open(json_path, encoding="utf-8") as json_file:
-                        credential = json.load(json_file)
-                        credentials_supported.update(credential)
+            credentials_supported = _load_fallback_credentials_supported(dir_path)
 
     except FileNotFoundError as e:
         cfgserv.app_logger.exception(f"Metadata Error: file not found. \n{e}")
