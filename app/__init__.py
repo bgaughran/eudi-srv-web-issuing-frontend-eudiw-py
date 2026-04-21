@@ -49,6 +49,7 @@ from app_config.config_service import ConfService as cfgserv
 oidc_metadata: Dict[str, Any] = {}
 openid_metadata: Dict[str, Any] = {}
 oauth_metadata: Dict[str, Any] = {}
+oidc_metadata_clean: Dict[str, Any] = {}
 
 
 def replace_domain(
@@ -135,6 +136,25 @@ def _fetch_remote_credentials_supported() -> Dict[str, Any]:
     return _filter_supported_credentials(credentials_supported)
 
 
+def _refresh_remote_issuer_metadata() -> Dict[str, Any]:
+    data = _fetch_remote_metadata()
+
+    credential_request_encryption = data.get("credential_request_encryption")
+    if isinstance(credential_request_encryption, dict):
+        oidc_metadata["credential_request_encryption"] = copy.deepcopy(
+            credential_request_encryption
+        )
+        oidc_metadata_clean["credential_request_encryption"] = copy.deepcopy(
+            credential_request_encryption
+        )
+
+    credentials_supported = _filter_supported_credentials(
+        data.get("credential_configurations_supported", {})
+    )
+    oidc_metadata["credential_configurations_supported"] = credentials_supported
+    return credentials_supported
+
+
 def get_credential_configurations_supported(refresh: bool = False) -> Dict[str, Any]:
     credentials_supported = oidc_metadata.get("credential_configurations_supported", {})
 
@@ -142,8 +162,7 @@ def get_credential_configurations_supported(refresh: bool = False) -> Dict[str, 
         return credentials_supported
 
     try:
-        credentials_supported = _fetch_remote_credentials_supported()
-        oidc_metadata["credential_configurations_supported"] = credentials_supported
+        credentials_supported = _refresh_remote_issuer_metadata()
     except Exception as exc:
         cfgserv.app_logger.warning(
             f"Credential metadata refresh failed, continuing with cached metadata. {exc}"
@@ -178,19 +197,7 @@ def setup_metadata():
         _apply_metadata_overrides(oidc_metadata_clean, metadata_overrides)
 
         try:
-            data = _fetch_remote_metadata()
-            credential_request_encryption = data.get("credential_request_encryption")
-            if isinstance(credential_request_encryption, dict):
-                oidc_metadata["credential_request_encryption"] = copy.deepcopy(
-                    credential_request_encryption
-                )
-                oidc_metadata_clean["credential_request_encryption"] = copy.deepcopy(
-                    credential_request_encryption
-                )
-
-            credentials_supported = _filter_supported_credentials(
-                data.get("credential_configurations_supported", {})
-            )
+            credentials_supported = _refresh_remote_issuer_metadata()
         except Exception:
             credentials_supported = _load_fallback_credentials_supported(dir_path)
 
